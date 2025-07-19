@@ -19,7 +19,10 @@ export async function GET(req: NextRequest) {
     const data = result
       .filter((d) => d.close !== null)
       .map((d) => ({
-        date: d.date.toISOString().slice(0, 10),
+        date: d.date.toISOString(),
+        open: d.open as number,
+        high: d.high as number,
+        low: d.low as number,
         close: d.close as number,
       }));
     // Get the full name and ticker of the symbol

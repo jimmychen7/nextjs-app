@@ -44,9 +44,11 @@ export default function LLMChatChart() {
   return (
     <div className="flex flex-col w-full items-center">
       {/* Chart on top */}
-      <div className="w-full flex-1 flex items-center justify-center bg-background p-4">
-        <div className="w-full h-[400px]">
-          <PriceHistorySWR symbol={symbol} />
+      <div className="w-full max-w-4xl flex-1 flex items-center justify-center bg-background p-4">
+        <div className="w-full flex justify-center">
+          <div className="w-full">
+            <PriceHistorySWR symbol={symbol} />
+          </div>
         </div>
       </div>
       {/* Prompt below */}

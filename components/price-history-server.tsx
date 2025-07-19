@@ -5,7 +5,7 @@ export default async function PriceHistoryServer({ symbol }: { symbol: string })
   try {
     const today = new Date();
     const from = new Date(today);
-    from.setDate(today.getDate() - 365); // fetch past year
+    from.setDate(today.getDate() - 30); // fetch past year
 
     const result = await yahooFinance.historical(symbol, {
       period1: from,
@@ -16,7 +16,10 @@ export default async function PriceHistoryServer({ symbol }: { symbol: string })
     const data = result
       .filter((d) => d.close !== null)
       .map((d) => ({
-        date: d.date.toISOString().slice(0, 10),
+        date: d.date,
+        open: d.open as number,
+        high: d.high as number,
+        low: d.low as number,
         close: d.close as number,
       }));
 

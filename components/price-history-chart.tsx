@@ -3,110 +3,88 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
-  Title,
+  TimeScale,
   Tooltip,
+  Title,
   Legend,
 } from "chart.js";
+import { CandlestickController, CandlestickElement } from "chartjs-chart-financial";
+import "chartjs-adapter-date-fns";
+import { Chart } from "react-chartjs-2";
+import type { ChartOptions } from "chart.js";
 
-// Register the components you need
 ChartJS.register(
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
-  Title,
+  TimeScale,
   Tooltip,
-  Legend
+  Title,
+  Legend,
+  CandlestickController,
+  CandlestickElement
 );
-
-import { Line } from "react-chartjs-2";
-import type { ChartData, ChartOptions } from "chart.js";
 
 export function PriceHistoryChart({
   data,
   symbol,
 }: {
-  data: { date: string; close: number }[];
+data: { date: string; open: number; high: number; low: number; close: number }[];
   symbol: string;
 }) {
   if (!data || data.length === 0) return <div>No data available.</div>;
 
-  // Find indices for special points
-  const closes = data.map((d) => d.close);
-  const maxIdx = closes.indexOf(Math.max(...closes));
-  const minIdx = closes.indexOf(Math.min(...closes));
-  const firstIdx = 0;
-  const lastIdx = data.length - 1;
+  // Map real data to candlestick format and filter invalid points
+  const candleData = data
+    .map(d => ({
+      x: new Date(d.date),
+      o: d.open,
+      h: d.high,
+      l: d.low,
+      c: d.close,
+    }));
 
-  const chartData: ChartData<"line"> = {
-    labels: data.map((d) => d.date),
+  const chartData = {
     datasets: [
       {
-        label: '',
-        data: closes,
-        fill: false,
-        borderColor: "#3b82f6",
-        backgroundColor: "#3b82f6",
-        tension: 0.5,
-        // Show bigger dot for special points
-        pointRadius: (ctx) => {
-          const i = ctx.dataIndex;
-          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return 4;
-          return 0;
-        },
-        pointHoverRadius: (ctx) => {
-          const i = ctx.dataIndex;
-          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return 4;
-          return 0;
-        },
-        pointBackgroundColor: (ctx) => {
-          const i = ctx.dataIndex;
-          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return '#ef4444'; // red-500
-          return 'rgba(0,0,0,0)';
-        },
-        pointBorderColor: (ctx) => {
-          const i = ctx.dataIndex;
-          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return '#ef4444'; // red-500
-          return 'rgba(0,0,0,0)';
-        },
+        label: symbol,
+        data: candleData,
+        type: "candlestick" as const,
+        barPercentage: 0.05,
+        categoryPercentage: 0.05,
+        // width: 5, // Uncomment if supported by your plugin version
       },
     ],
   };
 
-  const options: ChartOptions<"line"> = {
+  const options: ChartOptions<'candlestick'> = {
     responsive: true,
-    maintainAspectRatio: false, // allow chart to fill container
-    layout: { padding: 0 }, // Remove all padding
-    animation: false, // Disable animation for chart load
     plugins: {
       legend: { display: false },
-      title: { display: true, text: symbol }, // Show symbol as chart title
+      title: { display: true, text: symbol },
       tooltip: {
         displayColors: false,
         usePointStyle: false,
+        callbacks: {
+          label: function(context) {
+            const v = context.raw as { o: number; h: number; l: number; c: number };
+            if (v && typeof v === 'object') {
+              return [
+                `Open: ${v.o?.toFixed(2)}`,
+                `High: ${v.h?.toFixed(2)}`,
+                `Low: ${v.l?.toFixed(2)}`,
+                `Close: ${v.c?.toFixed(2)}`,
+              ];
+            }
+            return '';
+          },
+        },
       },
     },
     scales: {
-      x: {
-        title: { display: false }, // Hide x axis title
-        ticks: { display: false }, // Hide x axis labels
-        grid: { display: false }, // Remove x grid lines
-        border: { display: false }, // Remove x axis line
-      },
-      y: {
-        title: { display: false }, // Hide y axis title
-        ticks: { display: false }, // Hide y axis labels
-        grid: { display: false }, // Remove y grid lines
-        border: { display: false }, // Remove y axis line
-      },
+      x: { type: "time", time: { unit: "day" } },
+      y: { beginAtZero: false },
     },
   };
 
-  return (
-    <div style={{ width: "100%", height: "100%" }}>
-      <Line data={chartData} options={options} />
-    </div>
-  );
+  return <Chart type="candlestick" data={chartData} options={options} />;
 } 
