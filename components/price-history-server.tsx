@@ -16,7 +16,7 @@ export default async function PriceHistoryServer({ symbol }: { symbol: string })
     const data = result
       .filter((d) => d.close !== null)
       .map((d) => ({
-        date: d.date,
+        date: d.date.toISOString(),
         open: d.open as number,
         high: d.high as number,
         low: d.low as number,
