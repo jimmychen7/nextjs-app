@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
+import PriceHistoryServer from '@/components/price-history-server';
 
 export default async function ProtectedPage() {
   const supabase = await createClient()
@@ -11,10 +12,10 @@ export default async function ProtectedPage() {
   }
 
   return (
-    <div className="flex h-svh w-full items-center justify-center gap-2">
-      <p>
-        Hello <span>{data.claims.email}</span>
-      </p>
+    <div className="w-full max-w-full flex flex-col items-stretch justify-center overflow-hidden h-full flex-1">
+      <div className="w-full h-full flex-1">
+        <PriceHistoryServer symbol="QQQ" />
+      </div>
     </div>
   )
 }
