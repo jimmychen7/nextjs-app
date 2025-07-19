@@ -24,40 +24,48 @@ ChartJS.register(
 import { Line } from "react-chartjs-2";
 import type { ChartData, ChartOptions } from "chart.js";
 
-interface PricePoint {
-  date: string;
-  close: number;
-}
-
 export function PriceHistoryChart({
   data,
   symbol,
 }: {
-  data: PricePoint[];
+  data: { date: string; close: number }[];
   symbol: string;
 }) {
   if (!data || data.length === 0) return <div>No data available.</div>;
+
+  // Find indices for special points
+  const closes = data.map((d) => d.close);
+  const maxIdx = closes.indexOf(Math.max(...closes));
+  const minIdx = closes.indexOf(Math.min(...closes));
+  const firstIdx = 0;
+  const lastIdx = data.length - 1;
 
   const chartData: ChartData<"line"> = {
     labels: data.map((d) => d.date),
     datasets: [
       {
-        label: `${symbol} Close Price`,
-        data: data.map((d) => d.close),
+        label: '',
+        data: closes,
         fill: false,
-        borderColor: "#3b82f6",
+        borderColor: "#3b82f0",
         backgroundColor: "#3b82f6",
         tension: 0.5,
-        pointRadius: 0,
-        pointHoverRadius: 0,
+        // Show bigger dot for special points
+        pointRadius: (ctx) => {
+          const i = ctx.dataIndex;
+          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return 4;
+          return 0;
+        },
+        pointHoverRadius: (ctx) => {
+          const i = ctx.dataIndex;
+          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return 4;
+          return 0;
+        },
       },
     ],
   };
 
   const options: ChartOptions<"line"> = {
-    responsive: true,
-    maintainAspectRatio: false, // allow chart to fill container
-    layout: { padding: 0 }, // Remove all padding
     plugins: {
       legend: { display: false },
       title: { display: true, text: symbol }, // Show symbol as chart title
