@@ -47,7 +47,7 @@ export function PriceHistoryChart({
         label: '',
         data: closes,
         fill: false,
-        borderColor: "#3b82f0",
+        borderColor: "#3b82f6",
         backgroundColor: "#3b82f6",
         tension: 0.5,
         // Show bigger dot for special points
@@ -61,14 +61,32 @@ export function PriceHistoryChart({
           if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return 4;
           return 0;
         },
+        pointBackgroundColor: (ctx) => {
+          const i = ctx.dataIndex;
+          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return '#ef4444'; // red-500
+          return 'rgba(0,0,0,0)';
+        },
+        pointBorderColor: (ctx) => {
+          const i = ctx.dataIndex;
+          if (i === maxIdx || i === minIdx || i === firstIdx || i === lastIdx) return '#ef4444'; // red-500
+          return 'rgba(0,0,0,0)';
+        },
       },
     ],
   };
 
   const options: ChartOptions<"line"> = {
+    responsive: true,
+    maintainAspectRatio: false, // allow chart to fill container
+    layout: { padding: 0 }, // Remove all padding
+    animation: false, // Disable animation for chart load
     plugins: {
       legend: { display: false },
       title: { display: true, text: symbol }, // Show symbol as chart title
+      tooltip: {
+        displayColors: false,
+        usePointStyle: false,
+      },
     },
     scales: {
       x: {

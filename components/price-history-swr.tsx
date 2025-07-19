@@ -13,11 +13,22 @@ async function fetcher(url: string) {
 export default function PriceHistorySWR({ symbol }: { symbol: string }) {
   const { data, error, isLoading } = useSWR(
     symbol ? `/api/price-history?symbol=${encodeURIComponent(symbol)}` : null,
-    fetcher
+    fetcher,
+    { shouldRetryOnError: false }
   );
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-500">Error: {error.message}</div>;
+  if (isLoading)
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-red-500">Error: {error.message}</div>
+      </div>
+    );
   if (!data) return null;
 
   // Show both ticker and long name in the chart title
