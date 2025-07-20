@@ -3,15 +3,13 @@ import { useState, useEffect } from "react";
 import PriceHistorySWR from "@/components/price-history-swr";
 import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { useRouter, useSearchParams } from "next/navigation";
+
 
 interface LLMChatChartProps {
   initialSymbols?: string[];
 }
 
 export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   
   // Ensure we have a valid initial symbol
   const defaultSymbols = initialSymbols.length > 0 ? initialSymbols : ["SPY"];
@@ -25,7 +23,6 @@ export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps)
   const [isTracked, setIsTracked] = useState<boolean | null>(null);
   const [trackId, setTrackId] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [inputFocused, setInputFocused] = useState(false);
 
   // Update current symbol when index changes
   useEffect(() => {
@@ -90,7 +87,6 @@ export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps)
       setIsTracked(false);
       setTrackId(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, userId]);
 
   async function handleSend() {
@@ -98,42 +94,26 @@ export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps)
     setMessages([...messages, { role: "user", content: input }]);
     setLoading(true);
 
-    const newSymbol = input.trim();
+    // Parse comma-separated symbols from input
+    const symbolList = input.trim()
+      .split(',')
+      .map((s: string) => s.trim().toUpperCase())
+      .filter((s: string) => s.length > 0);
+    
     setInput("");
     setLoading(false);
     
-    // Update the symbols array and current symbol (but don't update URL)
-    const newSymbols = [newSymbol];
-    setSymbols(newSymbols);
-    setCurrentSymbolIndex(0);
-    setSymbol(newSymbol);
-    
-    // Call your OpenRouter API route
-    // const res = await fetch("/api/openrouter-chat", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({ message: "Give a ticker for: " + input + ". Dont say anything else."}),
-    // });
-    // const data = await res.json();
-
-    // // If error, show as assistant message with error code only
-    // if (data.error) {
-    //   setInput("");
-    //   setLoading(false);
-    //   setSymbol(input);
-    //   return;
-    // }
-
-    // // Extract the LLM's reply
-    // const reply = data.choices?.[0]?.message?.content || "";
-    // setInput("");
-    // setLoading(false);
-    // setSymbol(reply);
+    if (symbolList.length > 0) {
+      setSymbols(symbolList);
+      setCurrentSymbolIndex(0);
+      setSymbol(symbolList[0]);
+    } else {
+      // Fallback to single symbol if parsing fails
+      setSymbols([input.trim()]);
+      setCurrentSymbolIndex(0);
+      setSymbol(input.trim());
+    }
   }
-
-
-
-  console.log('LLMChatChart render - symbol:', symbol, 'initialSymbols:', initialSymbols);
   
   return (
     <div className="flex flex-col w-full items-center">
@@ -190,6 +170,18 @@ export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps)
                       }]);
                       if (!error) {
                         await checkTracked(supabase, symbol, userId);
+                        
+                        // Send tracking notification email
+                        try {
+                          await fetch('/api/send-tracking-email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ symbol }),
+                          });
+                        } catch (emailError) {
+                          console.error('Failed to send tracking email:', emailError);
+                          // Don't fail the tracking operation if email fails
+                        }
                       }
                     } else {
                       // Untrack
@@ -233,8 +225,7 @@ export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps)
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
+
             className="w-full border border-input rounded-xl px-4 py-4 text-xl font-bold bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow text-center"
             placeholder="Search"
             disabled={loading}
