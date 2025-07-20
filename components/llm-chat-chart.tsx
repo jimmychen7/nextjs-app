@@ -1,12 +1,23 @@
 "use client";
 import { useState, useEffect } from "react";
 import PriceHistorySWR from "@/components/price-history-swr";
-import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LLMChatChart() {
-  const [symbol, setSymbol] = useState("SPY");
+interface LLMChatChartProps {
+  initialSymbols?: string[];
+}
+
+export default function LLMChatChart({ initialSymbols = [] }: LLMChatChartProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Ensure we have a valid initial symbol
+  const defaultSymbols = initialSymbols.length > 0 ? initialSymbols : ["SPY"];
+  const [symbols, setSymbols] = useState<string[]>(defaultSymbols);
+  const [currentSymbolIndex, setCurrentSymbolIndex] = useState(0);
+  const [symbol, setSymbol] = useState(defaultSymbols[0]);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +27,23 @@ export default function LLMChatChart() {
   const [userId, setUserId] = useState<string | null>(null);
   const [inputFocused, setInputFocused] = useState(false);
 
+  // Update current symbol when index changes
+  useEffect(() => {
+    if (symbols.length > 0 && currentSymbolIndex < symbols.length) {
+      setSymbol(symbols[currentSymbolIndex]);
+    }
+  }, [currentSymbolIndex, symbols]);
+
+  // Handle initial symbols prop changes
+  useEffect(() => {
+    console.log('LLMChatChart initialSymbols:', initialSymbols);
+    if (initialSymbols.length > 0) {
+      setSymbols(initialSymbols);
+      setCurrentSymbolIndex(0);
+      setSymbol(initialSymbols[0]);
+    }
+  }, [initialSymbols]);
+
   // Fetch user id on mount
   useEffect(() => {
     const supabase = createClient();
@@ -24,18 +52,7 @@ export default function LLMChatChart() {
     });
   }, []);
 
-  // SWR logic lifted to parent
-  const { data, error, isLoading } = useSWR(
-    symbol ? `/api/price-history?symbol=${encodeURIComponent(symbol)}` : null,
-    async (url: string) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch");
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
-      return json;
-    },
-    { shouldRetryOnError: false }
-  );
+
 
   // Helper to check if symbol is tracked for the user
   async function checkTracked(supabase: SupabaseClient, symbol: string, userId: string | null) {
@@ -47,10 +64,11 @@ export default function LLMChatChart() {
     setIsTracked(null); // loading state
     const { data: existing, error: selectError } = await supabase
       .from('tracked_symbols')
-      .select('id')
-      .eq('symbol', symbol)
+      .select('id, symbol')
       .eq('user_id', userId)
+      .eq('symbol', symbol.toUpperCase()) // Check for exact symbol match (case-insensitive by storing uppercase)
       .maybeSingle();
+    
     if (selectError) {
       setIsTracked(false);
       setTrackId(null);
@@ -63,9 +81,9 @@ export default function LLMChatChart() {
     }
   }
 
-  // Check if symbol is tracked after chart loads or symbol changes
+  // Check if symbol is tracked when symbol changes
   useEffect(() => {
-    if (!isLoading && !error && data && symbol && userId !== undefined) {
+    if (symbol && userId !== undefined) {
       const supabase = createClient();
       checkTracked(supabase, symbol, userId);
     } else {
@@ -73,53 +91,137 @@ export default function LLMChatChart() {
       setTrackId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, isLoading, error, data, userId]);
+  }, [symbol, userId]);
 
   async function handleSend() {
     if (!input.trim()) return;
     setMessages([...messages, { role: "user", content: input }]);
     setLoading(true);
-    // No need to manage chartLoaded state
 
-    // Call your OpenRouter API route
-    const res = await fetch("/api/openrouter-chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Give a ticker for: " + input + ". Dont say anything else."}),
-    });
-    const data = await res.json();
-
-    // If error, show as assistant message with error code only
-    if (data.error) {
-      setMessages((msgs) => [
-        ...msgs,
-        { role: "assistant", content: `Error: ${data.error.code}` },
-      ]);
-      setInput("");
-      setLoading(false);
-      setSymbol(input);
-      return;
-    }
-
-    // Extract the LLM's reply
-    const reply = data.choices?.[0]?.message?.content || "";
-    setMessages((msgs) => [...msgs, { role: "assistant", content: reply }]);
+    const newSymbol = input.trim();
     setInput("");
     setLoading(false);
-    setSymbol(reply);
+    
+    // Update the symbols array and current symbol (but don't update URL)
+    const newSymbols = [newSymbol];
+    setSymbols(newSymbols);
+    setCurrentSymbolIndex(0);
+    setSymbol(newSymbol);
+    
+    // Call your OpenRouter API route
+    // const res = await fetch("/api/openrouter-chat", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({ message: "Give a ticker for: " + input + ". Dont say anything else."}),
+    // });
+    // const data = await res.json();
+
+    // // If error, show as assistant message with error code only
+    // if (data.error) {
+    //   setInput("");
+    //   setLoading(false);
+    //   setSymbol(input);
+    //   return;
+    // }
+
+    // // Extract the LLM's reply
+    // const reply = data.choices?.[0]?.message?.content || "";
+    // setInput("");
+    // setLoading(false);
+    // setSymbol(reply);
   }
 
+
+
+  console.log('LLMChatChart render - symbol:', symbol, 'initialSymbols:', initialSymbols);
+  
   return (
     <div className="flex flex-col w-full items-center">
-      {/* Chart on top */}
+      {/* Symbol selector and save button */}
+      <div className="w-full max-w-4xl flex justify-center mb-4">
+        <div className="flex flex-col items-center gap-2">
+          {/* Symbol selector for multiple symbols */}
+          {symbols.length > 1 && (
+            <div className="flex gap-2 flex-wrap justify-center">
+              {symbols.map((sym, index) => (
+                <button
+                  key={sym}
+                  onClick={() => setCurrentSymbolIndex(index)}
+                  className={`px-4 py-2 rounded-lg font-semibold transition ${
+                    index === currentSymbolIndex
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+          )}
+          
+
+        </div>
+      </div>
+      
+      {/* Chart area */}
       <div className="w-full max-w-4xl flex-1 flex items-center justify-center bg-background p-4">
         <div className="w-full flex justify-center">
           <div className="w-full">
-            <PriceHistorySWR symbol={symbol} />
+            <PriceHistorySWR symbol={symbol} toggleComponent={
+              <div className="relative group">
+                <button
+                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-sm ${
+                    trackLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'
+                  } ${
+                    isTracked 
+                      ? 'bg-green-600' 
+                      : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                  disabled={trackLoading || userId === undefined || isTracked === null}
+                  onClick={async () => {
+                    const supabase = createClient();
+                    setTrackLoading(true);
+                    
+                    if (!isTracked) {
+                      // Track - store symbol in uppercase for consistency
+                      const { error } = await supabase.from('tracked_symbols').insert([{ 
+                        symbol: symbol.toUpperCase(), 
+                        user_id: userId 
+                      }]);
+                      if (!error) {
+                        await checkTracked(supabase, symbol, userId);
+                      }
+                    } else {
+                      // Untrack
+                      if (!trackId) return;
+                      const { error } = await supabase.from('tracked_symbols').delete().eq('id', trackId).eq('user_id', userId);
+                      if (!error) {
+                        await checkTracked(supabase, symbol, userId);
+                      }
+                    }
+                    setTrackLoading(false);
+                  }}
+                >
+                  {/* Toggle handle */}
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out ${
+                      isTracked ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                
+                {/* Custom tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20">
+                  {isTracked ? "Stop tracking" : "Track"}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-transparent border-t-gray-900"></div>
+                </div>
+              </div>
+            } />
           </div>
         </div>
       </div>
-      {/* Prompt below */}
+      
+      {/* Search input below */}
       <div className="w-full max-w-md p-4 flex flex-col items-center">
         <form
           className="w-full max-w-md"
@@ -139,57 +241,6 @@ export default function LLMChatChart() {
             autoComplete="off"
           />
         </form>
-        {/* Toggle Track/Untrack button below form, always stable: show spinner placeholder when isTracked is null */}
-        {!(inputFocused || input !== "") && !isLoading && !error && data && (
-          isTracked === null ? (
-            <button
-              className="w-full max-w-md mt-4 px-4 py-4 text-xl font-bold rounded-xl shadow bg-muted text-muted-foreground cursor-not-allowed"
-              style={{ minHeight: 56 }}
-              disabled
-            >
-              <svg className="animate-spin h-6 w-6 mx-auto" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              className={`w-full max-w-md mt-4 px-4 py-4 text-xl font-bold rounded-xl shadow transition ${
-                isTracked
-                  ? "bg-red-600 text-white hover:bg-red-700"
-                  : "bg-green-600 text-white hover:bg-green-700"
-              }`}
-              style={{ minHeight: 56 }}
-              disabled={trackLoading}
-              onClick={async () => {
-                const supabase = createClient();
-                setTrackLoading(true);
-                if (!isTracked) {
-                  // Track
-                  const { error } = await supabase.from('tracked_symbols').insert([{ symbol, user_id: userId }]);
-                  if (!error) {
-                    await checkTracked(supabase, symbol, userId);
-                  }
-                } else {
-                  // Untrack
-                  if (!trackId) return;
-                  const { error } = await supabase.from('tracked_symbols').delete().eq('id', trackId).eq('user_id', userId);
-                  if (!error) {
-                    await checkTracked(supabase, symbol, userId);
-                  }
-                }
-                setTrackLoading(false);
-              }}
-            >
-              {trackLoading ? (
-                <svg className="animate-spin h-6 w-6 mx-auto" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-              ) : isTracked ? "Untrack" : "Track"}
-            </button>
-          )
-        )}
       </div>
     </div>
   );

@@ -3,9 +3,9 @@ import yahooFinance from "yahoo-finance2";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const symbol = searchParams.get("symbol");
+  const symbol = searchParams.get("symbols");
   if (!symbol) {
-    return new Response(JSON.stringify({ error: "Missing symbol" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "Missing symbols" }), { status: 400 });
   }
   try {
     const today = new Date();
@@ -25,15 +25,33 @@ export async function GET(req: NextRequest) {
         low: d.low as number,
         close: d.close as number,
       }));
-    // Get the full name and ticker of the symbol
+    // Get detailed information about the symbol
     let name = symbol;
     let ticker = symbol;
+    let description = "";
+    let sector = "";
+    let industry = "";
+    
     try {
-      const quote = await yahooFinance.quoteSummary(symbol, { modules: ["price"] });
+      const quote = await yahooFinance.quoteSummary(symbol, { 
+        modules: ["price", "assetProfile", "summaryDetail"] 
+      });
+      
       name = quote.price?.longName || quote.price?.shortName || symbol;
       ticker = quote.price?.symbol || symbol;
+      description = quote.assetProfile?.longBusinessSummary || "";
+      sector = quote.assetProfile?.sector || "";
+      industry = quote.assetProfile?.industry || "";
     } catch {}
-    return new Response(JSON.stringify({ data, name, symbol: ticker }), { status: 200 });
+    
+    return new Response(JSON.stringify({ 
+      data, 
+      name, 
+      symbol: ticker, 
+      description,
+      sector,
+      industry
+    }), { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Failed to fetch data";
     return new Response(JSON.stringify({ error: message }), { status: 500 });
