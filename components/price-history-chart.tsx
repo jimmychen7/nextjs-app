@@ -8,7 +8,10 @@ import {
   Title,
   Legend,
 } from "chart.js";
-import { CandlestickController, CandlestickElement } from "chartjs-chart-financial";
+import {
+  CandlestickController,
+  CandlestickElement,
+} from "chartjs-chart-financial";
 import "chartjs-adapter-date-fns";
 import { Chart } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
@@ -21,27 +24,32 @@ ChartJS.register(
   Title,
   Legend,
   CandlestickController,
-  CandlestickElement
+  CandlestickElement,
 );
 
 export function PriceHistoryChart({
   data,
   symbol,
 }: {
-data: { date: string; open: number; high: number; low: number; close: number }[];
+  data: {
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  }[];
   symbol: string;
 }) {
   if (!data || data.length === 0) return <div>No data available.</div>;
 
   // Map real data to candlestick format and filter invalid points
-  const candleData = data
-    .map(d => ({
-      x: new Date(d.date),
-      o: d.open,
-      h: d.high,
-      l: d.low,
-      c: d.close,
-    }));
+  const candleData = data.map((d) => ({
+    x: new Date(d.date),
+    o: d.open,
+    h: d.high,
+    l: d.low,
+    c: d.close,
+  }));
 
   const chartData = {
     datasets: [
@@ -56,7 +64,7 @@ data: { date: string; open: number; high: number; low: number; close: number }[]
     ],
   };
 
-  const options: ChartOptions<'candlestick'> = {
+  const options: ChartOptions<"candlestick"> = {
     responsive: true,
     plugins: {
       legend: { display: false },
@@ -65,9 +73,14 @@ data: { date: string; open: number; high: number; low: number; close: number }[]
         displayColors: false,
         usePointStyle: false,
         callbacks: {
-          label: function(context) {
-            const v = context.raw as { o: number; h: number; l: number; c: number };
-            if (v && typeof v === 'object') {
+          label: function (context) {
+            const v = context.raw as {
+              o: number;
+              h: number;
+              l: number;
+              c: number;
+            };
+            if (v && typeof v === "object") {
               return [
                 `Open: ${v.o?.toFixed(2)}`,
                 `High: ${v.h?.toFixed(2)}`,
@@ -75,7 +88,7 @@ data: { date: string; open: number; high: number; low: number; close: number }[]
                 `Close: ${v.c?.toFixed(2)}`,
               ];
             }
-            return '';
+            return "";
           },
         },
       },
@@ -87,4 +100,4 @@ data: { date: string; open: number; high: number; low: number; close: number }[]
   };
 
   return <Chart type="candlestick" data={chartData} options={options} />;
-} 
+}

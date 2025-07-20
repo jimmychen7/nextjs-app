@@ -11,10 +11,10 @@ async function fetcher(url: string) {
   return json;
 }
 
-export default function PriceHistorySWR({ 
-  symbol, 
-  toggleComponent 
-}: { 
+export default function PriceHistorySWR({
+  symbol,
+  toggleComponent,
+}: {
   symbol: string;
   toggleComponent?: React.ReactNode;
 }) {
@@ -22,7 +22,7 @@ export default function PriceHistorySWR({
   const { data, error, isLoading } = useSWR(
     symbol ? `/api/price-history?symbols=${encodeURIComponent(symbol)}` : null,
     fetcher,
-    { shouldRetryOnError: false }
+    { shouldRetryOnError: false },
   );
 
   if (isLoading)
@@ -40,7 +40,10 @@ export default function PriceHistorySWR({
   if (!data) return null;
 
   // Show both ticker and long name in the chart title
-  const chartTitle = data.symbol && data.name ? `${data.symbol} – ${data.name}` : data.name || data.symbol;
+  const chartTitle =
+    data.symbol && data.name
+      ? `${data.symbol} – ${data.name}`
+      : data.name || data.symbol;
 
   return (
     <div className="w-full">
@@ -49,9 +52,7 @@ export default function PriceHistorySWR({
         <div className="flex items-start justify-between mb-2">
           <h2 className="text-xl font-bold text-foreground">{chartTitle}</h2>
           {toggleComponent && (
-            <div className="flex-shrink-0 ml-4">
-              {toggleComponent}
-            </div>
+            <div className="flex-shrink-0 ml-4">{toggleComponent}</div>
           )}
         </div>
         {data.sector && (
@@ -62,9 +63,11 @@ export default function PriceHistorySWR({
         )}
         {data.description && (
           <div className="relative">
-            <p className={`text-sm text-muted-foreground leading-relaxed transition-all duration-200 ${
-              isDescriptionExpanded ? '' : 'line-clamp-2'
-            }`}>
+            <p
+              className={`text-sm text-muted-foreground leading-relaxed transition-all duration-200 ${
+                isDescriptionExpanded ? "" : "line-clamp-2"
+              }`}
+            >
               {data.description}
             </p>
             {data.description.length > 150 && (
@@ -72,15 +75,15 @@ export default function PriceHistorySWR({
                 onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                 className="mt-2 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
               >
-                {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                {isDescriptionExpanded ? "Show less" : "Read more"}
               </button>
             )}
           </div>
         )}
       </div>
-      
+
       {/* Chart */}
       <PriceHistoryChart data={data.data} symbol={chartTitle} />
     </div>
   );
-} 
+}

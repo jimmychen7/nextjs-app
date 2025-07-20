@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 // Initialize Resend with API key
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -8,7 +8,7 @@ export default resend;
 // Helper function to send emails
 export async function sendEmail({
   to,
-  from = 'onboarding@resend.dev', // Resend's default verified domain
+  from = "onboarding@resend.dev", // Resend's default verified domain
   subject,
   text,
   html,
@@ -20,27 +20,25 @@ export async function sendEmail({
   html?: string;
 }) {
   try {
-    console.log('Sending email with Resend:', { to, from, subject });
-    
-        const emailData = {
+    console.log("Sending email with Resend:", { to, from, subject });
+
+    const { data, error } = await resend.emails.send({
       from,
       to,
       subject,
       ...(text && { text }),
       ...(html && { html }),
-    };
-    
-    const { data, error } = await resend.emails.send(emailData as any);
+    } as Parameters<typeof resend.emails.send>[0]);
 
     if (error) {
-      console.error('Resend error:', error);
+      console.error("Resend error:", error);
       return { success: false, error };
     }
 
-    console.log('Resend response:', data);
+    console.log("Resend response:", data);
     return { success: true, response: data };
   } catch (error) {
-    console.error('Resend error:', error);
+    console.error("Resend error:", error);
     return { success: false, error };
   }
 }
@@ -48,14 +46,14 @@ export async function sendEmail({
 // Predefined email templates
 export const emailTemplates = {
   welcome: (name: string) => ({
-    subject: 'Welcome to Price Tracker!',
+    subject: "Welcome to Price Tracker!",
     text: `Hi ${name}, welcome to Price Tracker! Start tracking your favorite stocks and crypto.`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #333;">Welcome to Price Tracker!</h1>
         <p>Hi ${name},</p>
         <p>Welcome to Price Tracker! You can now start tracking your favorite stocks and crypto assets.</p>
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}" 
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}" 
            style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
           Get Started
         </a>
@@ -63,7 +61,7 @@ export const emailTemplates = {
       </div>
     `,
   }),
-  
+
   priceAlert: (symbol: string, currentPrice: number, targetPrice: number) => ({
     subject: `Price Alert: ${symbol} has reached your target`,
     text: `${symbol} is currently at $${currentPrice}, which has reached your target price of $${targetPrice}.`,
@@ -75,7 +73,7 @@ export const emailTemplates = {
           <p><strong>Current Price:</strong> $${currentPrice}</p>
           <p><strong>Target Price:</strong> $${targetPrice}</p>
         </div>
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/chart?symbols=${symbol}" 
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/chart?symbols=${symbol}" 
            style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
           View Chart
         </a>
@@ -83,7 +81,13 @@ export const emailTemplates = {
     `,
   }),
 
-  symbolTracked: (symbol: string, currentPrice: number, symbolName: string, sector: string, industry: string) => ({
+  symbolTracked: (
+    symbol: string,
+    currentPrice: number,
+    symbolName: string,
+    sector: string,
+    industry: string,
+  ) => ({
     subject: `Symbol Tracked: ${symbol} - ${symbolName}`,
     text: `You're now tracking ${symbol} (${symbolName}). Current price: $${currentPrice}. Sector: ${sector}, Industry: ${industry}.`,
     html: `
@@ -97,7 +101,7 @@ export const emailTemplates = {
           <p><strong>Industry:</strong> ${industry}</p>
         </div>
         <p>You'll receive notifications about price changes and market updates for this symbol.</p>
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/chart?symbols=${symbol}" 
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/chart?symbols=${symbol}" 
            style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
           View Chart
         </a>
@@ -107,4 +111,4 @@ export const emailTemplates = {
       </div>
     `,
   }),
-}; 
+};

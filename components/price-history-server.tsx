@@ -1,7 +1,11 @@
 import { PriceHistoryChart } from "./price-history-chart";
 import yahooFinance from "yahoo-finance2";
 
-export default async function PriceHistoryServer({ symbol }: { symbol: string }) {
+export default async function PriceHistoryServer({
+  symbol,
+}: {
+  symbol: string;
+}) {
   try {
     const today = new Date();
     const from = new Date(today);
@@ -28,4 +32,4 @@ export default async function PriceHistoryServer({ symbol }: { symbol: string })
     const message = e instanceof Error ? e.message : "Failed to fetch data";
     return <div className="text-red-500">Error: {message}</div>;
   }
-} 
+}
