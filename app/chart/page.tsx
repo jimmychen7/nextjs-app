@@ -1,8 +1,9 @@
 "use client";
 import LLMChatChart from "@/components/llm-chat-chart";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function ChartPage() {
+function ChartPageContent() {
   const searchParams = useSearchParams();
   const symbolsParam = searchParams.get("symbols");
 
@@ -22,4 +23,12 @@ export default function ChartPage() {
 
   console.log("Chart page symbols:", symbols);
   return <LLMChatChart initialSymbols={symbols} />;
+}
+
+export default function ChartPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChartPageContent />
+    </Suspense>
+  );
 }

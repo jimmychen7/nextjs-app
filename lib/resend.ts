@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 // Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export default resend;
 
@@ -20,6 +20,11 @@ export async function sendEmail({
   html?: string;
 }) {
   try {
+    if (!resend) {
+      console.error("Resend API key not configured");
+      return { success: false, error: "Resend API key not configured" };
+    }
+
     console.log("Sending email with Resend:", { to, from, subject });
 
     const { data, error } = await resend.emails.send({
