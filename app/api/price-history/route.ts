@@ -13,12 +13,12 @@ export async function GET(req: NextRequest) {
     const today = new Date();
     const from = new Date(today);
     from.setDate(today.getDate() - 365);
-    const result = await yahooFinance.historical(symbol, {
+    const result = await yahooFinance.chart(symbol, {
       period1: from,
       period2: today,
       interval: "1d",
     });
-    const data = result
+    const data = result.quotes
       .filter((d) => d.close !== null)
       .map((d) => ({
         date: d.date.toISOString(),

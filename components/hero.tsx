@@ -7,17 +7,36 @@ export function Hero() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim()) return;
 
     setLoading(true);
-    const symbol = input.trim();
-    setInput("");
 
-    // Navigate to /chart with the symbol query parameter
-    router.push(`/chart?symbols=${encodeURIComponent(symbol)}`);
-    setLoading(false);
+    try {
+      const response = await fetch('/api/get-symbols', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: input }),
+      });
+
+      if (response.ok) {
+        const { symbols, error } = await response.json();
+        if (error) {
+          console.error(error);
+          // You can also set the error message in the state and display it to the user
+        } else if (symbols) {
+          router.push(`/chart?symbols=${encodeURIComponent(symbols)}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch symbols', error);
+    } finally {
+      setLoading(false);
+      setInput('');
+    }
   }
 
   return (

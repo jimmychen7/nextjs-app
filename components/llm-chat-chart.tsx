@@ -98,25 +98,31 @@ export default function LLMChatChart({
     setMessages([...messages, { role: "user", content: input }]);
     setLoading(true);
 
-    // Parse comma-separated symbols from input
-    const symbolList = input
-      .trim()
-      .split(",")
-      .map((s: string) => s.trim().toUpperCase())
-      .filter((s: string) => s.length > 0);
+    try {
+      const response = await fetch("/api/get-symbols", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: input }),
+      });
 
-    setInput("");
-    setLoading(false);
-
-    if (symbolList.length > 0) {
-      setSymbols(symbolList);
-      setCurrentSymbolIndex(0);
-      setSymbol(symbolList[0]);
-    } else {
-      // Fallback to single symbol if parsing fails
-      setSymbols([input.trim()]);
-      setCurrentSymbolIndex(0);
-      setSymbol(input.trim());
+      if (response.ok) {
+        const { symbols } = await response.json();
+        if (symbols) {
+          const symbolList = symbols.split(",").map((s: string) => s.trim().toUpperCase()).filter((s: string) => s.length > 0);
+          if (symbolList.length > 0) {
+            setSymbols(symbolList);
+            setCurrentSymbolIndex(0);
+            setSymbol(symbolList[0]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch symbols", error);
+    } finally {
+      setLoading(false);
+      setInput("");
     }
   }
 
